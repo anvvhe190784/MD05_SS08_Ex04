@@ -1,0 +1,32 @@
+name: Pull and Verify Payment Service from GHCR
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  pull_and_verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull payment-service:1.0.0 and Run Verify Container
+        run: |
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          IMAGE="ghcr.io/${OWNER}/payment-service:1.0.0"
+          echo "Pulling $IMAGE..."
+          docker pull "$IMAGE"
+          docker run -d --name verify_payment -p 8080:8080 "$IMAGE"
+          sleep 3
+          docker ps --filter "name=verify_payment"
+          docker rm -f verify_payment
